@@ -6,12 +6,14 @@
 <title>四国遍路スマート旅程プランナー</title>
 <style>
 
-:root{--primary:#2d5016;--primary-light:#4a7c2a;--accent:#c4956a;--bg:#faf9f6;--surface:#fff;--text:#2d2d2d;--text-muted:#6b6b6b;--border:#e0ddd5;--border-light:#f0ede5;--radius:8px;--shadow:0 1px 3px rgba(0,0,0,.08);--shadow-lg:0 4px 12px rgba(0,0,0,.1);--tokushima:#e74c3c;--kochi:#3498db;--ehime:#2ecc71;--kagawa:#f39c12;--danger:#c0392b}
+:root{--primary:#2d5016;--primary-light:#4a7c2a;--accent:#c4956a;--bg:#faf9f6;--surface:#fff;--text:#2d2d2d;--text-muted:#6b6b6b;--border:#e0ddd5;--border-light:#f0ede5;--radius:8px;--shadow:0 1px 3px rgba(0,0,0,.08);--shadow-lg:0 4px 12px rgba(0,0,0,.1);--tokushima:#e74c3c;--kochi:#3498db;--ehime:#2ecc71;--kagawa:#f39c12;--danger:#c0392b;--info:#2980b9}
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6}
 .header{background:var(--primary);color:#fff;padding:16px 24px}
 .header h1{font-size:18px;font-weight:600}
 .header p{font-size:12px;opacity:.7;margin-top:2px}
+.info-banner{background:#e8f4fd;border:1px solid #b8daff;color:#084298;padding:8px 24px;font-size:12px;display:flex;align-items:center;gap:8px}
+.info-banner .sync-status{font-weight:600}
 .settings{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end}
 .settings .sg{display:flex;flex-direction:column}
 .settings label{font-size:11px;color:var(--text-muted);margin-bottom:2px}
@@ -20,7 +22,7 @@ body{font-family:'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;background:var(
 .stats-bar .stat{display:flex;gap:4px}
 .stats-bar .stat-label{color:var(--text-muted)}
 .stats-bar .stat-value{font-weight:600;color:var(--primary)}
-.actions{padding:8px 24px;display:flex;gap:8px;flex-wrap:wrap}
+.actions{padding:8px 24px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .btn{padding:8px 16px;border:none;border-radius:var(--radius);cursor:pointer;font-size:13px;font-weight:500;transition:all .2s}
 .btn-primary{background:var(--primary);color:#fff}
 .btn-primary:hover{background:var(--primary-light)}
@@ -29,6 +31,8 @@ body{font-family:'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;background:var(
 .btn-outline{background:transparent;border:1px solid var(--border)}
 .btn-outline:hover{background:var(--border-light)}
 .btn-danger{background:var(--danger);color:#fff}
+.btn-info{background:var(--info);color:#fff}
+.btn-info:hover{background:#2471a3}
 .btn-sm{padding:4px 10px;font-size:12px}
 .help-text{padding:8px 24px;font-size:12px;color:var(--text-muted);background:#fffbe6;border-bottom:1px solid var(--border)}
 .legend{display:flex;gap:16px;padding:8px 24px;font-size:11px;flex-wrap:wrap}
@@ -60,7 +64,9 @@ body{font-family:'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;background:var(
 .temple-card .lock-btn{position:absolute;top:4px;right:4px;background:none;border:none;cursor:pointer;font-size:14px;padding:2px;line-height:1}
 .empty-day{text-align:center;color:var(--text-muted);padding:20px 8px;font-size:12px}
 .footer{padding:12px 24px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text-muted)}
-.tooltip{position:relative;display:inline-block}
+.sync-section{background:var(--border-light);border-radius:var(--radius);padding:16px;margin:16px 24px}
+.sync-section h3{font-size:14px;color:var(--primary);margin-bottom:8px}
+.sync-section p{font-size:12px;color:var(--text-muted);margin-bottom:12px}
 
 </style>
 </head>
@@ -70,17 +76,27 @@ body{font-family:'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;background:var(
     <h1>四国遍路スマート旅程プランナー</h1>
     <p>半自動スケジューリング — アンカーを設定すると隙間を自動補完</p>
 </div>
+<div class="info-banner">
+    <span>&#8505;</span>
+    <span>データは<strong>このブラウザ・このデバイス</strong>に保存されます。別デバイスで使う場合は「URL共有」または「JSON出力→インポート」を使用してください。</span>
+    <span class="sync-status" id="syncStatus"></span>
+</div>
 <div id="settings" class="settings"></div>
 <div id="stats" class="stats-bar"></div>
 <div class="actions">
     <button class="btn btn-primary" onclick="autoDistribute()">&#128260; 自動配分</button>
     <button class="btn btn-outline" onclick="unlockAll()">&#128275; 全て固定解除</button>
     <button class="btn btn-outline" onclick="clearAll()">&#128465; クリア</button>
+    <span style="border-left:1px solid var(--border);margin:0 4px;height:24px"></span>
+    <button class="btn btn-info" onclick="shareURL()">&#128279; URL共有（別デバイスへ）</button>
     <button class="btn btn-accent" onclick="exportJSON()">&#128190; JSON出力</button>
+    <button class="btn btn-outline" onclick="importJSON()">&#128229; JSON入力</button>
     <button class="btn btn-outline" onclick="exportCSV()">&#128196; CSV出力</button>
 </div>
 <div class="help-text">
-    &#128161; 寺札カードをドラッグ＆ドロップで別の日に移動できます。移動した寺は自動的に「固定」され、残りの寺が距離に基づいて再配分されます。ロックアイコンで固定/解除を切り替えられます。
+    &#128161; <strong>使い方:</strong> 寺札カードをドラッグ＆ドロップで別の日に移動。移動した寺は自動的に「固定」され、残りが距離に基づいて再配分されます。<br>
+    &#128279; <strong>URL共有:</strong> 現在の状態をURLにエンコード。スマホでそのURLを開けばデータが復元されます（クラウド不要）。<br>
+    &#128229; <strong>JSON入力:</strong> 別デバイスで出力したJSONファイルを読み込んで復元。
 </div>
 <div class="legend">
     <div class="legend-item"><div class="legend-dot" style="background:var(--tokushima)"></div>徳島(発心)</div>
@@ -92,7 +108,7 @@ body{font-family:'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;background:var(
 </div>
 <div id="days" class="days-container"></div>
 <div class="footer">
-    <div>localStorage自動保存 | 距離データ: 四国八十八ヶ所霊場会</div>
+    <div>localStorage自動保存 / URL共有対応 | 距離データ: 四国八十八ヶ所霊場会</div>
 </div>
 
 <script>
@@ -114,8 +130,14 @@ let state = {
   assignments: {}
 };
 
-function saveState(){localStorage.setItem('henro_smart_itinerary',JSON.stringify(state));}
-function loadState(){const s=localStorage.getItem('henro_smart_itinerary');if(s){state={...state,...JSON.parse(s)};}}
+function saveState(){
+  localStorage.setItem('henro_smart_itinerary',JSON.stringify(state));
+  updateSyncStatus();
+}
+function loadState(){
+  const s=localStorage.getItem('henro_smart_itinerary');
+  if(s){state={...state,...JSON.parse(s)};}
+}
 
 function getTemple(no){return TEMPLES.find(t=>t.no===no);}
 function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -127,28 +149,23 @@ function getDateArray(start,end){
   for(let d=new Date(s);d<=e;d.setDate(d.getDate()+1)){dates.push(d.toISOString().split('T')[0]);}
   return dates;
 }
-
 function getRangeTemples(){return TEMPLES.filter(t=>t.no>=state.startTemple&&t.no<=state.endTemple);}
 
 function autoDistribute(){
   const temples=getRangeTemples();
   const dates=getDateArray(state.startDate,state.endDate);
   if(temples.length===0||dates.length===0)return;
-
   let cumDist=0;const cumDistMap={};
   for(const t of temples){cumDistMap[t.no]=cumDist;cumDist+=t.dist;}
-
   const anchored=Object.entries(state.assignments)
     .filter(([no,a])=>a.anchored&&parseInt(no)>=state.startTemple&&parseInt(no)<=state.endTemple)
     .map(([no,a])=>({no:parseInt(no),date:a.date}))
     .sort((a,b)=>a.no-b.no);
-
   const boundaries=[
     {no:temples[0].no,date:dates[0],isAnchor:false},
     ...anchored.filter(a=>a.no!==temples[0].no&&a.no!==temples[temples.length-1].no).map(a=>({...a,isAnchor:true})),
     {no:temples[temples.length-1].no,date:dates[dates.length-1],isAnchor:false}
   ];
-
   for(let i=0;i<boundaries.length-1;i++){
     const start=boundaries[i];const end=boundaries[i+1];
     if(end.no<=start.no)continue;
@@ -175,13 +192,11 @@ function autoDistribute(){
       state.assignments[t.no]={date:segDates[dayIdx],anchored:false};
     }
   }
-
   for(const b of boundaries){
     if(!state.assignments[b.no]||!state.assignments[b.no].anchored){
       state.assignments[b.no]={date:b.date,anchored:b.isAnchor};
     }
   }
-
   for(const no of Object.keys(state.assignments)){
     const n=parseInt(no);
     if(n<state.startTemple||n>state.endTemple)delete state.assignments[no];
@@ -195,17 +210,14 @@ function toggleAnchor(no){
   if(!state.assignments[no].anchored){autoDistribute();}
   else{saveState();render();}
 }
-
 function unlockAll(){
   for(const a of Object.values(state.assignments)){a.anchored=false;}
   autoDistribute();
 }
-
 function clearAll(){
   state.assignments={};
   autoDistribute();
 }
-
 function updateSettings(){
   state.tripName=document.getElementById('sTripName').value;
   state.startDate=document.getElementById('sStartDate').value;
@@ -245,11 +257,7 @@ function calcDayStats(templeList){
   const endMin=startMin+totalMin;
   const endH=Math.floor(endMin/60);
   const endM=endMin%60;
-  return{
-    totalDist:totalDist,
-    endTime:String(endH).padStart(2,'0')+':'+String(endM).padStart(2,'0'),
-    count:templeList.length
-  };
+  return{totalDist:totalDist,endTime:String(endH).padStart(2,'0')+':'+String(endM).padStart(2,'0'),count:templeList.length};
 }
 
 function render(){
@@ -292,24 +300,20 @@ function renderDays(){
   if(dates.length===0){el.innerHTML='<div class="empty-day">日付を設定してください</div>';return;}
   const temples=getRangeTemples();
   if(temples.length===0){el.innerHTML='<div class="empty-day">札所範囲を設定してください</div>';return;}
-
   el.innerHTML=dates.map((date,i)=>{
     const dayTemples=Object.entries(state.assignments)
       .filter(([no,a])=>a.date===date)
       .map(([no,a])=>({...getTemple(parseInt(no)),anchored:a.anchored}))
       .filter(t=>t&&t.no)
       .sort((a,b)=>a.no-b.no);
-
     if(dayTemples.length===0){
       return '<div class="day-column rest-day" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,\''+date+'\')">'+
         '<div class="day-header empty"><div class="day-num">Day '+(i+1)+'</div><div class="day-date">'+fmtDate(date)+'</div><div class="day-info">休養日</div></div>'+
         '<div class="day-body"><div class="empty-day">ドラッグで<br>札所を追加</div></div></div>';
     }
-
     const stats=calcDayStats(dayTemples);
     const mainDojo=dayTemples[0].dojo;
     const dojoClass=DOJO_CLASSES[mainDojo]||'empty';
-
     return '<div class="day-column" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,\''+date+'\')">'+
       '<div class="day-header '+dojoClass+'">'+
         '<div class="day-num">Day '+(i+1)+'</div>'+
@@ -329,13 +333,49 @@ function renderDays(){
   }).join('');
 }
 
+function updateSyncStatus(){
+  const el=document.getElementById('syncStatus');
+  if(!el)return;
+  const count=Object.keys(state.assignments).length;
+  const anchored=Object.entries(state.assignments).filter(([no,a])=>a.anchored).length;
+  el.textContent='このブラウザに保存済み: '+count+'件の札所割当 ('+anchored+'件固定)';
+}
+
+// === JSON Import ===
+function importJSON(){
+  const input=document.createElement('input');
+  input.type='file';
+  input.accept='.json';
+  input.onchange=function(e){
+    const file=e.target.files[0];
+    if(!file)return;
+    const reader=new FileReader();
+    reader.onload=function(ev){
+      try{
+        const data=JSON.parse(ev.target.result);
+        state={...state,...data};
+        if(!state.assignments)state.assignments={};
+        saveState();
+        render();
+        alert('データをインポートしました: '+Object.keys(state.assignments).length+'件');
+      }catch(err){alert('インポートエラー: '+err.message);}
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// === JSON Export ===
 function exportJSON(){
   const data=JSON.stringify({tripName:state.tripName,startDate:state.startDate,endDate:state.endDate,startTemple:state.startTemple,endTemple:state.endTemple,mode:state.mode,startTime:state.startTime,assignments:state.assignments,exportedAt:new Date().toISOString()},null,2);
   const blob=new Blob([data],{type:'application/json'});
   const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;a.download='itinerary_'+(state.tripName||'trip').replace(/\s/g,'_')+'_'+(state.startDate||'')+'.json';a.click();URL.revokeObjectURL(url);
+  const a=document.createElement('a');a.href=url;
+  a.download='itinerary_'+(state.tripName||'trip').replace(/\s/g,'_')+'_'+(state.startDate||'')+'.json';
+  a.click();URL.revokeObjectURL(url);
 }
 
+// === CSV Export ===
 function exportCSV(){
   const dates=getDateArray(state.startDate,state.endDate);
   let csv='\uFEFF日付,Day,札所番号,寺名,道場,県,御本尊,次番迄距離km,移動時間,ステータス\n';
@@ -355,18 +395,79 @@ function exportCSV(){
   });
   const blob=new Blob([csv],{type:'text/csv'});
   const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;a.download='itinerary_'+(state.startDate||'')+'.csv';a.click();URL.revokeObjectURL(url);
+  const a=document.createElement('a');a.href=url;
+  a.download='itinerary_'+(state.startDate||'')+'.csv';a.click();URL.revokeObjectURL(url);
 }
 
+// === URL Share (state encoded in URL hash) ===
+function shareURL(){
+  const json=JSON.stringify(state);
+  const uint8=new TextEncoder().encode(json);
+  let binary='';
+  uint8.forEach(b=>binary+=String.fromCharCode(b));
+  const encoded=btoa(binary);
+  const url=window.location.origin+window.location.pathname+'#'+encoded;
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(()=>{
+      alert('URLをコピーしました！\n\nこのURLを別デバイス（スマホ等）で開くと、\n現在の旅程データがそのまま復元されます。\n\nURL長: '+url.length+'文字');
+    }).catch(()=>{
+      showShareURL(url);
+    });
+  }else{
+    showShareURL(url);
+  }
+}
+function showShareURL(url){
+  const ta=document.createElement('textarea');
+  ta.value=url;
+  ta.style.position='fixed';
+  ta.style.opacity='0';
+  document.body.appendChild(ta);
+  ta.select();
+  try{
+    document.execCommand('copy');
+    alert('URLをコピーしました！\n別デバイスで開くとデータが復元されます。');
+  }catch(e){
+    prompt('このURLをコピーして別デバイスで開いてください:',url);
+  }
+  document.body.removeChild(ta);
+}
+function loadFromURL(){
+  const hash=window.location.hash.substring(1);
+  if(!hash||hash.length<10)return false;
+  try{
+    const binary=atob(hash);
+    const bytes=new Uint8Array(binary.length);
+    for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+    const json=new TextDecoder().decode(bytes);
+    const data=JSON.parse(json);
+    state={...state,...data};
+    if(!state.assignments)state.assignments={};
+    saveState();
+    render();
+    history.replaceState(null,'',window.location.pathname+window.location.search);
+    return true;
+  }catch(e){
+    console.error('URL decode error:',e);
+    return false;
+  }
+}
+
+// === Event Listeners ===
 document.addEventListener('change',function(e){
   if(e.target.id&&e.target.id.startsWith('s')&&e.target.id!=='sTripName'){
     updateSettings();
   }
 });
 
+// === Init ===
 loadState();
-if(Object.keys(state.assignments).length===0){autoDistribute();}
+const loadedFromURL=loadFromURL();
+if(!loadedFromURL&&Object.keys(state.assignments).length===0){
+  autoDistribute();
+}
 render();
+updateSyncStatus();
 
 </script>
 </body>
