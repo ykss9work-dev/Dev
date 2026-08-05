@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>四国遍路スマート旅程プランナー</title>
+<style>
+
+:root{--primary:#2d5016;--primary-light:#4a7c2a;--accent:#c4956a;--bg:#faf9f6;--surface:#fff;--text:#2d2d2d;--text-muted:#6b6b6b;--border:#e0ddd5;--border-light:#f0ede5;--radius:8px;--shadow:0 1px 3px rgba(0,0,0,.08);--shadow-lg:0 4px 12px rgba(0,0,0,.1);--tokushima:#e74c3c;--kochi:#3498db;--ehime:#2ecc71;--kagawa:#f39c12;--danger:#c0392b}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6}
+.header{background:var(--primary);color:#fff;padding:16px 24px}
+.header h1{font-size:18px;font-weight:600}
+.header p{font-size:12px;opacity:.7;margin-top:2px}
+.settings{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end}
+.settings .sg{display:flex;flex-direction:column}
+.settings label{font-size:11px;color:var(--text-muted);margin-bottom:2px}
+.settings input,.settings select{padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-family:inherit}
+.stats-bar{background:var(--border-light);padding:8px 24px;display:flex;gap:20px;font-size:13px;flex-wrap:wrap}
+.stats-bar .stat{display:flex;gap:4px}
+.stats-bar .stat-label{color:var(--text-muted)}
+.stats-bar .stat-value{font-weight:600;color:var(--primary)}
+.actions{padding:8px 24px;display:flex;gap:8px;flex-wrap:wrap}
+.btn{padding:8px 16px;border:none;border-radius:var(--radius);cursor:pointer;font-size:13px;font-weight:500;transition:all .2s}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-light)}
+.btn-accent{background:var(--accent);color:#fff}
+.btn-accent:hover{background:#d4a574}
+.btn-outline{background:transparent;border:1px solid var(--border)}
+.btn-outline:hover{background:var(--border-light)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-sm{padding:4px 10px;font-size:12px}
+.help-text{padding:8px 24px;font-size:12px;color:var(--text-muted);background:#fffbe6;border-bottom:1px solid var(--border)}
+.legend{display:flex;gap:16px;padding:8px 24px;font-size:11px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:4px}
+.legend-dot{width:12px;height:12px;border-radius:2px}
+.days-container{display:flex;gap:12px;overflow-x:auto;padding:16px 24px;min-height:400px;align-items:flex-start}
+.day-column{flex-shrink:0;width:210px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);display:flex;flex-direction:column;transition:border-color .2s,background .2s}
+.day-column.drag-over{border:2px solid var(--accent);background:#fff8f0}
+.day-column.rest-day{width:120px;opacity:.6}
+.day-header{padding:10px;text-align:center;border-radius:var(--radius) var(--radius) 0 0;color:#fff}
+.day-header.hosshin{background:var(--tokushima)}
+.day-header.shugyo{background:var(--kochi)}
+.day-header.bodai{background:var(--ehime)}
+.day-header.nehan{background:var(--kagawa)}
+.day-header.empty{background:#aaa}
+.day-header .day-num{font-size:16px;font-weight:700}
+.day-header .day-date{font-size:12px;opacity:.9}
+.day-header .day-info{font-size:11px;opacity:.8;margin-top:4px}
+.day-body{padding:8px;flex:1;min-height:80px}
+.temple-card{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--tokushima);border-radius:4px;padding:8px 10px;margin-bottom:8px;cursor:grab;transition:box-shadow .2s,opacity .2s;position:relative}
+.temple-card:hover{box-shadow:var(--shadow-lg)}
+.temple-card.dragging{opacity:.4}
+.temple-card.anchored{border-width:2px;border-left-width:4px;background:#fffdf5}
+.temple-card.auto{border-style:dashed;border-left-style:solid}
+.temple-card .t-no{font-size:11px;color:var(--text-muted)}
+.temple-card .t-name{font-size:14px;font-weight:600}
+.temple-card .t-dist{font-size:11px;color:var(--text-muted)}
+.temple-card .t-pref{font-size:10px;color:var(--text-muted);margin-top:2px}
+.temple-card .lock-btn{position:absolute;top:4px;right:4px;background:none;border:none;cursor:pointer;font-size:14px;padding:2px;line-height:1}
+.empty-day{text-align:center;color:var(--text-muted);padding:20px 8px;font-size:12px}
+.footer{padding:12px 24px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text-muted)}
+.tooltip{position:relative;display:inline-block}
+
+</style>
+</head>
+<body>
+
+<div class="header">
+    <h1>四国遍路スマート旅程プランナー</h1>
+    <p>半自動スケジューリング — アンカーを設定すると隙間を自動補完</p>
+</div>
+<div id="settings" class="settings"></div>
+<div id="stats" class="stats-bar"></div>
+<div class="actions">
+    <button class="btn btn-primary" onclick="autoDistribute()">&#128260; 自動配分</button>
+    <button class="btn btn-outline" onclick="unlockAll()">&#128275; 全て固定解除</button>
+    <button class="btn btn-outline" onclick="clearAll()">&#128465; クリア</button>
+    <button class="btn btn-accent" onclick="exportJSON()">&#128190; JSON出力</button>
+    <button class="btn btn-outline" onclick="exportCSV()">&#128196; CSV出力</button>
+</div>
+<div class="help-text">
+    &#128161; 寺札カードをドラッグ＆ドロップで別の日に移動できます。移動した寺は自動的に「固定」され、残りの寺が距離に基づいて再配分されます。ロックアイコンで固定/解除を切り替えられます。
+</div>
+<div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--tokushima)"></div>徳島(発心)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--kochi)"></div>高知(修行)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--ehime)"></div>愛媛(菩提)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--kagawa)"></div>香川(涅槃)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#fffdf5;border:2px solid var(--accent)"></div>固定(アンカー)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--surface);border:2px dashed var(--border)"></div>自動配分</div>
+</div>
+<div id="days" class="days-container"></div>
+<div class="footer">
+    <div>localStorage自動保存 | 距離データ: 四国八十八ヶ所霊場会</div>
+</div>
+
+<script>
+const TEMPLES = [{"no": 1, "name": "霊山寺", "kana": "りょうぜんじ", "honzon": "釈迦如来", "pref": "徳島", "addr": "徳島県鳴門市大麻町板東字塚鼻126", "dist": 1.2, "time": "00:03", "dojo": "発心"}, {"no": 2, "name": "極楽寺", "kana": "ごくらくじ", "honzon": "阿弥陀如来", "pref": "徳島", "addr": "徳島県鳴門市大麻町桧字ダンノ上12", "dist": 2.9, "time": "00:05", "dojo": "発心"}, {"no": 3, "name": "金泉寺", "kana": "こんせんじ", "honzon": "釈迦如来", "pref": "徳島", "addr": "徳島県板野郡板野町大寺字亀山下66", "dist": 5.8, "time": "00:11", "dojo": "発心"}, {"no": 4, "name": "大日寺", "kana": "だいにちじ", "honzon": "大日如来", "pref": "徳島", "addr": "徳島県板野郡板野町黒谷字居内5", "dist": 1.7, "time": "00:03", "dojo": "発心"}, {"no": 5, "name": "地蔵寺", "kana": "じぞうじ", "honzon": "勝軍地蔵菩薩", "pref": "徳島", "addr": "徳島県板野郡板野町羅漢字林東5", "dist": 5.5, "time": "00:09", "dojo": "発心"}, {"no": 6, "name": "安楽寺", "kana": "あんらくじ", "honzon": "薬師如来", "pref": "徳島", "addr": "徳島県板野郡上板町引野字寺ノ西北8", "dist": 1.8, "time": "00:03", "dojo": "発心"}, {"no": 7, "name": "十楽寺", "kana": "じゅうらくじ", "honzon": "阿弥陀如来", "pref": "徳島", "addr": "徳島県阿波市土成町高尾字法教田58", "dist": 3.8, "time": "00:06", "dojo": "発心"}, {"no": 8, "name": "熊谷寺", "kana": "くまだにじ", "honzon": "千手観世音菩薩", "pref": "徳島", "addr": "徳島県阿波市土成町土成字前田185", "dist": 2.5, "time": "00:05", "dojo": "発心"}, {"no": 9, "name": "法輪寺", "kana": "ほうりんじ", "honzon": "涅槃釈迦如来", "pref": "徳島", "addr": "徳島県阿波市土成町土成字田中198-2", "dist": 6.4, "time": "00:13", "dojo": "発心"}, {"no": 10, "name": "切幡寺", "kana": "きりはたじ", "honzon": "千手観世音菩薩", "pref": "徳島", "addr": "徳島県阿波市市場町切幡字観音129", "dist": 12.5, "time": "00:23", "dojo": "発心"}, {"no": 11, "name": "藤井寺", "kana": "ふじいでら", "honzon": "薬師如来", "pref": "徳島", "addr": "徳島県吉野川市鴨島町飯尾1525", "dist": 35.7, "time": "00:54", "dojo": "発心"}, {"no": 12, "name": "焼山寺", "kana": "しょうさんじ", "honzon": "虚空蔵菩薩", "pref": "徳島", "addr": "徳島県名西郡神山町下分字地中318", "dist": 26.9, "time": "00:40", "dojo": "発心"}, {"no": 13, "name": "大日寺", "kana": "だいにちじ", "honzon": "十一面観世音菩薩", "pref": "徳島", "addr": "徳島県徳島市一宮町西丁376", "dist": 3.3, "time": "00:06", "dojo": "発心"}, {"no": 14, "name": "常楽寺", "kana": "じょうらくじ", "honzon": "弥勒菩薩", "pref": "徳島", "addr": "徳島県徳島市国府町延命606", "dist": 1.3, "time": "00:04", "dojo": "発心"}, {"no": 15, "name": "国分寺", "kana": "こくぶんじ", "honzon": "薬師如来", "pref": "徳島", "addr": "徳島県徳島市国府町矢野718-1", "dist": 2.2, "time": "00:04", "dojo": "発心"}, {"no": 16, "name": "観音寺", "kana": "かんおんじ", "honzon": "千手観世音菩薩", "pref": "徳島", "addr": "徳島県徳島市国府町字観音寺49", "dist": 4.0, "time": "00:07", "dojo": "発心"}, {"no": 17, "name": "井戸寺", "kana": "いどじ", "honzon": "七仏薬師如来", "pref": "徳島", "addr": "徳島県徳島市国府町井戸80-1", "dist": 18.0, "time": "00:34", "dojo": "発心"}, {"no": 18, "name": "恩山寺", "kana": "おんざんじ", "honzon": "薬師如来", "pref": "徳島", "addr": "徳島県小松島市田野町恩山寺谷40", "dist": 5.2, "time": "00:09", "dojo": "発心"}, {"no": 19, "name": "立江寺", "kana": "たつえじ", "honzon": "延命地蔵菩薩", "pref": "徳島", "addr": "徳島県小松島市立江町字若松13", "dist": 16.2, "time": "00:27", "dojo": "発心"}, {"no": 20, "name": "鶴林寺", "kana": "かくりんじ", "honzon": "地蔵菩薩", "pref": "徳島", "addr": "徳島県勝浦郡勝浦町鶴山14", "dist": 8.7, "time": "00:14", "dojo": "発心"}, {"no": 21, "name": "太龍寺", "kana": "たいりゅうじ", "honzon": "虚空蔵菩薩", "pref": "徳島", "addr": "徳島県阿南市加茂町龍山2", "dist": 17.2, "time": "00:24", "dojo": "発心"}, {"no": 22, "name": "平等寺", "kana": "びょうどうじ", "honzon": "薬師如来", "pref": "徳島", "addr": "徳島県阿南市新野町秋山177", "dist": 21.3, "time": "00:25", "dojo": "発心"}, {"no": 23, "name": "薬王寺", "kana": "やくおうじ", "honzon": "薬師如来", "pref": "徳島", "addr": "徳島県海部郡海陽町", "dist": 77.0, "time": "01:24", "dojo": "発心"}, {"no": 24, "name": "最御崎寺", "kana": "ほつみさきじ", "honzon": "虚空蔵菩薩", "pref": "高知", "addr": "高知県室戸市室戸岬町4058-1", "dist": 6.4, "time": "00:10", "dojo": "修行"}, {"no": 25, "name": "津照寺", "kana": "しんしょうじ", "honzon": "延命地蔵菩薩", "pref": "高知", "addr": "高知県室戸市室津2644", "dist": 5.2, "time": "00:12", "dojo": "修行"}, {"no": 26, "name": "金剛頂寺", "kana": "こんごうちょうじ", "honzon": "薬師如来", "pref": "高知", "addr": "高知県室戸市元乙523", "dist": 33.6, "time": "00:47", "dojo": "修行"}, {"no": 27, "name": "神峯寺", "kana": "こうのみねじ", "honzon": "十一面観世音菩薩", "pref": "高知", "addr": "高知県安芸郡安田町唐の浜2594", "dist": 38.6, "time": "00:55", "dojo": "修行"}, {"no": 28, "name": "大日寺", "kana": "だいにちじ", "honzon": "大日如来", "pref": "高知", "addr": "高知県香美郡野市町母代寺476", "dist": 11.2, "time": "00:20", "dojo": "修行"}, {"no": 29, "name": "国分寺", "kana": "こくぶんじ", "honzon": "千手観世音菩薩", "pref": "高知", "addr": "高知県南国市国分546", "dist": 8.8, "time": "00:15", "dojo": "修行"}, {"no": 30, "name": "善楽寺", "kana": "ぜんらくじ", "honzon": "阿弥陀如来", "pref": "高知", "addr": "高知県高知市一宮2501", "dist": 9.2, "time": "00:20", "dojo": "修行"}, {"no": 31, "name": "竹林寺", "kana": "ちくりんじ", "honzon": "文殊菩薩", "pref": "高知", "addr": "高知県高知市五台山3577", "dist": 9.8, "time": "00:18", "dojo": "修行"}, {"no": 32, "name": "禅師峰寺", "kana": "ぜんじぶじ", "honzon": "十一面観世音菩薩", "pref": "高知", "addr": "高知県南国市十市308", "dist": 10.8, "time": "00:17", "dojo": "修行"}, {"no": 33, "name": "雪蹊寺", "kana": "せっけいじ", "honzon": "薬師如来", "pref": "高知", "addr": "高知県高知市長浜857-3", "dist": 8.2, "time": "00:12", "dojo": "修行"}, {"no": 34, "name": "種間寺", "kana": "たねまじ", "honzon": "薬師如来", "pref": "高知", "addr": "高知県吾川郡春野町秋山72-1", "dist": 12.4, "time": "00:22", "dojo": "修行"}, {"no": 35, "name": "清瀧寺", "kana": "きよたきじ", "honzon": "薬師如来", "pref": "高知", "addr": "高知県土佐市高岡町丁568-1", "dist": 14.0, "time": "00:25", "dojo": "修行"}, {"no": 36, "name": "青龍寺", "kana": "しょうりゅうじ", "honzon": "波切不動明王", "pref": "高知", "addr": "高知県土佐市宇佐町竜163", "dist": 54.0, "time": "01:07", "dojo": "修行"}, {"no": 37, "name": "岩本寺", "kana": "いわもとじ", "honzon": "阿弥陀如来", "pref": "高知", "addr": "高知県高岡郡四万十町茂串3-13", "dist": 198.0, "time": "04:12", "dojo": "修行"}, {"no": 38, "name": "金剛福寺", "kana": "こんごうふくじ", "honzon": "三面千手観世音菩薩", "pref": "高知", "addr": "高知県土佐清水市足摺岬214-1", "dist": 56.2, "time": "01:05", "dojo": "修行"}, {"no": 39, "name": "延光寺", "kana": "えんこうじ", "honzon": "薬師如来", "pref": "高知", "addr": "高知県宿毛市平田町中山390", "dist": 28.4, "time": "00:35", "dojo": "修行"}, {"no": 40, "name": "観自在寺", "kana": "かんじざいじ", "honzon": "薬師如来", "pref": "愛媛", "addr": "愛媛県南宇和郡愛南町御荘平城2253-1", "dist": 51.3, "time": "01:16", "dojo": "菩提"}, {"no": 41, "name": "龍光寺", "kana": "りゅうこうじ", "honzon": "十一面観世音菩薩", "pref": "愛媛", "addr": "愛媛県宇和島市三間町戸雁173", "dist": 4.6, "time": "00:07", "dojo": "菩提"}, {"no": 42, "name": "佛木寺", "kana": "ぶつもくじ", "honzon": "大日如来", "pref": "愛媛", "addr": "愛媛県宇和島市三間町1683", "dist": 14.5, "time": "00:22", "dojo": "菩提"}, {"no": 43, "name": "明石寺", "kana": "めいせきじ", "honzon": "千手観世音菩薩", "pref": "愛媛", "addr": "愛媛県西予市宇和町明石104", "dist": 76.7, "time": "01:46", "dojo": "菩提"}, {"no": 44, "name": "大寶寺", "kana": "たいほうじ", "honzon": "十一面観世音菩薩", "pref": "愛媛", "addr": "愛媛県上浮穴郡久万高原町菅生二番耕地1173", "dist": 11.4, "time": "00:16", "dojo": "菩提"}, {"no": 45, "name": "岩屋寺", "kana": "いわやじ", "honzon": "不動明王", "pref": "愛媛", "addr": "愛媛県上浮穴郡久万高原町七鳥1468", "dist": 34.0, "time": "00:40", "dojo": "菩提"}, {"no": 46, "name": "浄瑠璃寺", "kana": "じょうるりじ", "honzon": "薬師如来", "pref": "愛媛", "addr": "愛媛県松山市浄瑠璃町282", "dist": 1.2, "time": "00:02", "dojo": "菩提"}, {"no": 47, "name": "八坂寺", "kana": "やさかじ", "honzon": "阿弥陀如来", "pref": "愛媛", "addr": "愛媛県松山市浄瑠璃町八坂773", "dist": 4.7, "time": "00:07", "dojo": "菩提"}, {"no": 48, "name": "西林寺", "kana": "さいりんじ", "honzon": "十一面観世音菩薩", "pref": "愛媛", "addr": "愛媛県松山市高井町1007", "dist": 2.9, "time": "00:06", "dojo": "菩提"}, {"no": 49, "name": "浄土寺", "kana": "じょうどじ", "honzon": "釈迦如来", "pref": "愛媛", "addr": "愛媛県松山市鷹子町1198", "dist": 2.6, "time": "00:06", "dojo": "菩提"}, {"no": 50, "name": "繁多寺", "kana": "はんたじ", "honzon": "薬師如来", "pref": "愛媛", "addr": "愛媛県松山市畑寺町32", "dist": 2.8, "time": "00:07", "dojo": "菩提"}, {"no": 51, "name": "石手寺", "kana": "いしてじ", "honzon": "薬師如来", "pref": "愛媛", "addr": "愛媛県松山市石手2-9-21", "dist": 11.4, "time": "00:23", "dojo": "菩提"}, {"no": 52, "name": "太山寺", "kana": "たいさんじ", "honzon": "十一面観世音菩薩", "pref": "愛媛", "addr": "愛媛県松山市太山寺町1730", "dist": 2.6, "time": "00:06", "dojo": "菩提"}, {"no": 53, "name": "圓明寺", "kana": "えんみょうじ", "honzon": "阿弥陀如来", "pref": "愛媛", "addr": "愛媛県松山市和気町1-182", "dist": 9.5, "time": "00:45", "dojo": "菩提"}, {"no": 54, "name": "延命寺", "kana": "えんめいじ", "honzon": "不動明王", "pref": "愛媛", "addr": "愛媛県今治市阿方甲636", "dist": 48.7, "time": "01:44", "dojo": "菩提"}, {"no": 55, "name": "南光坊", "kana": "なんこうぼう", "honzon": "大通智勝如来", "pref": "愛媛", "addr": "愛媛県今治市別宮町3-1", "dist": 3.4, "time": "00:08", "dojo": "菩提"}, {"no": 56, "name": "泰山寺", "kana": "たいさんじ", "honzon": "地蔵菩薩", "pref": "愛媛", "addr": "愛媛県今治市小泉1-9-18", "dist": 3.4, "time": "00:08", "dojo": "菩提"}, {"no": 57, "name": "栄福寺", "kana": "えいふくじ", "honzon": "阿弥陀如来", "pref": "愛媛", "addr": "愛媛県今治市玉川町八幡200", "dist": 2.9, "time": "00:07", "dojo": "菩提"}, {"no": 58, "name": "仙遊寺", "kana": "せんゆうじ", "honzon": "千手観世音菩薩", "pref": "愛媛", "addr": "愛媛県今治市玉川町別所483", "dist": 7.3, "time": "00:12", "dojo": "菩提"}, {"no": 59, "name": "国分寺", "kana": "こくぶんじ", "honzon": "薬師如来", "pref": "愛媛", "addr": "愛媛県今治市国分4-1-33", "dist": 31.4, "time": "00:52", "dojo": "菩提"}, {"no": 60, "name": "横峰寺", "kana": "よこみねじ", "honzon": "大日如来", "pref": "愛媛", "addr": "愛媛県西条市小松町石鎚2253", "dist": 14.5, "time": "00:31", "dojo": "菩提"}, {"no": 61, "name": "香園寺", "kana": "こうおんじ", "honzon": "大日如来", "pref": "愛媛", "addr": "愛媛県西条市小松町南川19", "dist": 1.6, "time": "00:04", "dojo": "菩提"}, {"no": 62, "name": "宝寿寺", "kana": "ほうじゅじ", "honzon": "十一面観世音菩薩", "pref": "愛媛", "addr": "愛媛県西条市小松町新屋敷428", "dist": 1.5, "time": "00:03", "dojo": "菩提"}, {"no": 63, "name": "吉祥寺", "kana": "きちじょうじ", "honzon": "毘沙門天", "pref": "愛媛", "addr": "愛媛県西条市氷見乙1048", "dist": 3.3, "time": "00:06", "dojo": "菩提"}, {"no": 64, "name": "前神寺", "kana": "まえがみじ", "honzon": "阿弥陀如来", "pref": "愛媛", "addr": "愛媛県西条市州之内甲1426", "dist": 46.7, "time": "01:09", "dojo": "菩提"}, {"no": 65, "name": "三角寺", "kana": "さんかくじ", "honzon": "十一面観世音菩薩", "pref": "愛媛", "addr": "愛媛県四国中央市金田町三角寺75", "dist": 32.3, "time": "00:49", "dojo": "菩提"}, {"no": 66, "name": "雲辺寺", "kana": "うんぺんじ", "honzon": "千手観世音菩薩", "pref": "徳島", "addr": "徳島県三好市池田町白地763-2", "dist": 28.0, "time": "00:43", "dojo": "涅槃"}, {"no": 67, "name": "大興寺", "kana": "だいこうじ", "honzon": "薬師如来", "pref": "香川", "addr": "香川県三豊市山本町辻4209", "dist": 9.4, "time": "00:16", "dojo": "涅槃"}, {"no": 68, "name": "神恵院", "kana": "じんねいん", "honzon": "阿弥陀如来", "pref": "香川", "addr": "香川県観音寺市八幡町1-2-7", "dist": 0.6, "time": "00:02", "dojo": "涅槃"}, {"no": 69, "name": "観音寺", "kana": "かんのんじ", "honzon": "聖観世音菩薩", "pref": "香川", "addr": "香川県観音寺市八幡町1-2-7", "dist": 5.5, "time": "00:10", "dojo": "涅槃"}, {"no": 70, "name": "本山寺", "kana": "もとやまじ", "honzon": "馬頭観世音菩薩", "pref": "香川", "addr": "香川県三豊市豊中町本山甲1445", "dist": 12.6, "time": "00:20", "dojo": "涅槃"}, {"no": 71, "name": "弥谷寺", "kana": "いやだにじ", "honzon": "千手観世音菩薩", "pref": "香川", "addr": "香川県三豊市三野町大見乙70", "dist": 6.1, "time": "00:11", "dojo": "涅槃"}, {"no": 72, "name": "曼荼羅寺", "kana": "まんだらじ", "honzon": "大日如来", "pref": "香川", "addr": "香川県善通寺市吉原町1380-1", "dist": 0.6, "time": "00:02", "dojo": "涅槃"}, {"no": 73, "name": "出釈迦寺", "kana": "しゅっしゃかじ", "honzon": "釈迦如来", "pref": "香川", "addr": "香川県善通寺市吉原町1091", "dist": 3.4, "time": "00:08", "dojo": "涅槃"}, {"no": 74, "name": "甲山寺", "kana": "こうやまじ", "honzon": "薬師如来", "pref": "香川", "addr": "香川県善通寺市弘田町1765-1", "dist": 2.0, "time": "00:05", "dojo": "涅槃"}, {"no": 75, "name": "善通寺", "kana": "ぜんつうじ", "honzon": "薬師如来", "pref": "香川", "addr": "香川県善通寺市善通寺町3-3-1", "dist": 3.4, "time": "00:06", "dojo": "涅槃"}, {"no": 76, "name": "金倉寺", "kana": "こんぞうじ", "honzon": "薬師如来", "pref": "香川", "addr": "香川県善通寺市金蔵寺町1160", "dist": 4.3, "time": "00:08", "dojo": "涅槃"}, {"no": 77, "name": "道隆寺", "kana": "どうりゅうじ", "honzon": "薬師如来", "pref": "香川", "addr": "香川県仲多度郡多度津町北鴨1-3-30", "dist": 7.6, "time": "00:16", "dojo": "涅槃"}, {"no": 78, "name": "郷照寺", "kana": "ごうしょうじ", "honzon": "阿弥陀如来", "pref": "香川", "addr": "香川県綾歌郡宇多津町1435", "dist": 7.0, "time": "00:14", "dojo": "涅槃"}, {"no": 79, "name": "天皇寺", "kana": "てんのうじ", "honzon": "十一面観世音菩薩", "pref": "香川", "addr": "香川県坂出市西庄町1713-2", "dist": 7.3, "time": "00:12", "dojo": "涅槃"}, {"no": 80, "name": "國分寺", "kana": "こくぶんじ", "honzon": "十一面千手観世音菩薩", "pref": "香川", "addr": "香川県高松市国分寺町国分2065", "dist": 13.8, "time": "00:22", "dojo": "涅槃"}, {"no": 81, "name": "白峯寺", "kana": "しろみねじ", "honzon": "千手観世音菩薩", "pref": "香川", "addr": "香川県坂出市青海町2635", "dist": 7.4, "time": "00:12", "dojo": "涅槃"}, {"no": 82, "name": "根香寺", "kana": "ねごろじ", "honzon": "千手観世音菩薩", "pref": "香川", "addr": "香川県高松市中山町1506", "dist": 18.2, "time": "00:31", "dojo": "涅槃"}, {"no": 83, "name": "一宮寺", "kana": "いちのみやじ", "honzon": "聖観世音菩薩", "pref": "香川", "addr": "香川県高松市一宮町607", "dist": 16.9, "time": "00:33", "dojo": "涅槃"}, {"no": 84, "name": "屋島寺", "kana": "やしまじ", "honzon": "十一面観世音菩薩", "pref": "香川", "addr": "香川県高松市屋島東町1808", "dist": 10.4, "time": "00:19", "dojo": "涅槃"}, {"no": 85, "name": "八栗寺", "kana": "やくりじ", "honzon": "聖観世音菩薩", "pref": "香川", "addr": "香川県高松市牟礼町牟礼3416", "dist": 6.9, "time": "00:12", "dojo": "涅槃"}, {"no": 86, "name": "志度寺", "kana": "しどじ", "honzon": "十一面観世音菩薩", "pref": "香川", "addr": "香川県さぬき市志度1102", "dist": 7.2, "time": "00:12", "dojo": "涅槃"}, {"no": 87, "name": "長尾寺", "kana": "ながおじ", "honzon": "聖観世音菩薩", "pref": "香川", "addr": "香川県さぬき市長尾西653", "dist": 16.1, "time": "00:23", "dojo": "涅槃"}, {"no": 88, "name": "大窪寺", "kana": "おおくぼじ", "honzon": "薬師如来", "pref": "香川", "addr": "香川県さぬき市多和兼割96", "dist": 29.0, "time": "00:40", "dojo": "涅槃"}];
+const PREF_COLORS = {'徳島':'var(--tokushima)','高知':'var(--kochi)','愛媛':'var(--ehime)','香川':'var(--kagawa)'};
+const DOJO_CLASSES = {'発心':'hosshin','修行':'shugyo','菩提':'bodai','涅槃':'nehan'};
+const MODE_SPEEDS = {'walking':4,'car':40,'bus':30,'mixed':20};
+const MODE_LABELS = {'walking':'徒歩','car':'車','bus':'バス','mixed':'混合'};
+const VISIT_MIN = 30;
+
+let state = {
+  tripName: '第1回フィールドワーク',
+  startDate: '2026-08-10',
+  endDate: '2026-08-16',
+  startTemple: 1,
+  endTemple: 23,
+  mode: 'walking',
+  startTime: '08:00',
+  assignments: {}
+};
+
+function saveState(){localStorage.setItem('henro_smart_itinerary',JSON.stringify(state));}
+function loadState(){const s=localStorage.getItem('henro_smart_itinerary');if(s){state={...state,...JSON.parse(s)};}}
+
+function getTemple(no){return TEMPLES.find(t=>t.no===no);}
+function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmtDate(d){if(!d)return'';const dt=new Date(d);const w=['日','月','火','水','木','金','土'][dt.getDay()];return (dt.getMonth()+1)+'/'+dt.getDate()+'('+w+')';}
+
+function getDateArray(start,end){
+  if(!start||!end)return[];
+  const dates=[];const s=new Date(start);const e=new Date(end);
+  for(let d=new Date(s);d<=e;d.setDate(d.getDate()+1)){dates.push(d.toISOString().split('T')[0]);}
+  return dates;
+}
+
+function getRangeTemples(){return TEMPLES.filter(t=>t.no>=state.startTemple&&t.no<=state.endTemple);}
+
+function autoDistribute(){
+  const temples=getRangeTemples();
+  const dates=getDateArray(state.startDate,state.endDate);
+  if(temples.length===0||dates.length===0)return;
+
+  let cumDist=0;const cumDistMap={};
+  for(const t of temples){cumDistMap[t.no]=cumDist;cumDist+=t.dist;}
+
+  const anchored=Object.entries(state.assignments)
+    .filter(([no,a])=>a.anchored&&parseInt(no)>=state.startTemple&&parseInt(no)<=state.endTemple)
+    .map(([no,a])=>({no:parseInt(no),date:a.date}))
+    .sort((a,b)=>a.no-b.no);
+
+  const boundaries=[
+    {no:temples[0].no,date:dates[0],isAnchor:false},
+    ...anchored.filter(a=>a.no!==temples[0].no&&a.no!==temples[temples.length-1].no).map(a=>({...a,isAnchor:true})),
+    {no:temples[temples.length-1].no,date:dates[dates.length-1],isAnchor:false}
+  ];
+
+  for(let i=0;i<boundaries.length-1;i++){
+    const start=boundaries[i];const end=boundaries[i+1];
+    if(end.no<=start.no)continue;
+    const segTemples=temples.filter(t=>t.no>start.no&&t.no<end.no);
+    if(segTemples.length===0)continue;
+    let segDates=getDateArray(start.date,end.date);
+    if(segDates.length===0)continue;
+    if(segDates.length===1){
+      for(const t of segTemples){
+        if(!state.assignments[t.no]||!state.assignments[t.no].anchored){
+          state.assignments[t.no]={date:segDates[0],anchored:false};
+        }
+      }
+      continue;
+    }
+    const startDist=cumDistMap[start.no]||0;
+    const endDist=cumDistMap[end.no]||0;
+    const segTotalDist=Math.max(0.001,endDist-startDist);
+    for(const t of segTemples){
+      if(state.assignments[t.no]&&state.assignments[t.no].anchored)continue;
+      const tDist=(cumDistMap[t.no]||0)-startDist;
+      const ratio=Math.max(0,Math.min(1,tDist/segTotalDist));
+      const dayIdx=Math.min(Math.floor(ratio*(segDates.length-1)),segDates.length-1);
+      state.assignments[t.no]={date:segDates[dayIdx],anchored:false};
+    }
+  }
+
+  for(const b of boundaries){
+    if(!state.assignments[b.no]||!state.assignments[b.no].anchored){
+      state.assignments[b.no]={date:b.date,anchored:b.isAnchor};
+    }
+  }
+
+  for(const no of Object.keys(state.assignments)){
+    const n=parseInt(no);
+    if(n<state.startTemple||n>state.endTemple)delete state.assignments[no];
+  }
+  saveState();render();
+}
+
+function toggleAnchor(no){
+  if(!state.assignments[no])return;
+  state.assignments[no].anchored=!state.assignments[no].anchored;
+  if(!state.assignments[no].anchored){autoDistribute();}
+  else{saveState();render();}
+}
+
+function unlockAll(){
+  for(const a of Object.values(state.assignments)){a.anchored=false;}
+  autoDistribute();
+}
+
+function clearAll(){
+  state.assignments={};
+  autoDistribute();
+}
+
+function updateSettings(){
+  state.tripName=document.getElementById('sTripName').value;
+  state.startDate=document.getElementById('sStartDate').value;
+  state.endDate=document.getElementById('sEndDate').value;
+  state.startTemple=parseInt(document.getElementById('sStartTemple').value);
+  state.endTemple=parseInt(document.getElementById('sEndTemple').value);
+  state.mode=document.getElementById('sMode').value;
+  state.startTime=document.getElementById('sStartTime').value;
+  autoDistribute();
+}
+
+function onDragStart(e,no){
+  e.dataTransfer.setData('text/plain',String(no));
+  e.dataTransfer.effectAllowed='move';
+  setTimeout(()=>{e.target.classList.add('dragging');},0);
+}
+function onDragEnd(e){e.target.classList.remove('dragging');}
+function onDragOver(e){e.preventDefault();e.dataTransfer.dropEffect='move';e.currentTarget.classList.add('drag-over');}
+function onDragLeave(e){e.currentTarget.classList.remove('drag-over');}
+function onDrop(e,date){
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  const no=parseInt(e.dataTransfer.getData('text/plain'));
+  if(!no||!getTemple(no))return;
+  state.assignments[no]={date:date,anchored:true};
+  autoDistribute();
+}
+
+function calcDayStats(templeList){
+  const totalDist=templeList.reduce((s,t)=>s+t.dist,0);
+  const speed=MODE_SPEEDS[state.mode]||4;
+  const travelMin=Math.round(totalDist/speed*60);
+  const visitMin=templeList.length*VISIT_MIN;
+  const totalMin=travelMin+visitMin;
+  const parts=state.startTime.split(':').map(Number);
+  const startMin=parts[0]*60+parts[1];
+  const endMin=startMin+totalMin;
+  const endH=Math.floor(endMin/60);
+  const endM=endMin%60;
+  return{
+    totalDist:totalDist,
+    endTime:String(endH).padStart(2,'0')+':'+String(endM).padStart(2,'0'),
+    count:templeList.length
+  };
+}
+
+function render(){
+  renderSettings();
+  renderStats();
+  renderDays();
+}
+
+function renderSettings(){
+  document.getElementById('settings').innerHTML=
+    '<div class="sg"><label>フィールドワーク名</label><input type="text" id="sTripName" value="'+esc(state.tripName)+'" style="width:180px"></div>'+
+    '<div class="sg"><label>開始日</label><input type="date" id="sStartDate" value="'+state.startDate+'"></div>'+
+    '<div class="sg"><label>終了日</label><input type="date" id="sEndDate" value="'+state.endDate+'"></div>'+
+    '<div class="sg"><label>開始札所</label><select id="sStartTemple">'+TEMPLES.map(t=>'<option value="'+t.no+'" '+(state.startTemple===t.no?'selected':'')+'>'+t.no+'番 '+t.name+'</option>').join('')+'</select></div>'+
+    '<div class="sg"><label>終了札所</label><select id="sEndTemple">'+TEMPLES.map(t=>'<option value="'+t.no+'" '+(state.endTemple===t.no?'selected':'')+'>'+t.no+'番 '+t.name+'</option>').join('')+'</select></div>'+
+    '<div class="sg"><label>移動手段</label><select id="sMode">'+Object.entries(MODE_LABELS).map(([k,v])=>'<option value="'+k+'" '+(state.mode===k?'selected':'')+'>'+v+'</option>').join('')+'</select></div>'+
+    '<div class="sg"><label>開始時刻</label><input type="time" id="sStartTime" value="'+state.startTime+'"></div>'+
+    '<div class="sg" style="justify-content:flex-end"><button class="btn btn-primary btn-sm" onclick="updateSettings()">適用・再配分</button></div>';
+}
+
+function renderStats(){
+  const temples=getRangeTemples();
+  const dates=getDateArray(state.startDate,state.endDate);
+  const assigned=Object.keys(state.assignments).filter(no=>{const n=parseInt(no);return n>=state.startTemple&&n<=state.endTemple;}).length;
+  const anchored=Object.entries(state.assignments).filter(([no,a])=>a.anchored).length;
+  const totalDist=temples.reduce((s,t)=>s+t.dist,0);
+  const avgPerDay=dates.length>0?(assigned/dates.length).toFixed(1):0;
+  document.getElementById('stats').innerHTML=
+    '<div class="stat"><span class="stat-label">総距離:</span><span class="stat-value">'+totalDist.toFixed(1)+'km</span></div>'+
+    '<div class="stat"><span class="stat-label">日数:</span><span class="stat-value">'+dates.length+'日</span></div>'+
+    '<div class="stat"><span class="stat-label">札所:</span><span class="stat-value">'+assigned+'/'+temples.length+'</span></div>'+
+    '<div class="stat"><span class="stat-label">固定:</span><span class="stat-value">'+anchored+'</span></div>'+
+    '<div class="stat"><span class="stat-label">1日平均:</span><span class="stat-value">'+avgPerDay+'寺</span></div>'+
+    '<div class="stat"><span class="stat-label">手段:</span><span class="stat-value">'+MODE_LABELS[state.mode]+'</span></div>';
+}
+
+function renderDays(){
+  const dates=getDateArray(state.startDate,state.endDate);
+  const el=document.getElementById('days');
+  if(dates.length===0){el.innerHTML='<div class="empty-day">日付を設定してください</div>';return;}
+  const temples=getRangeTemples();
+  if(temples.length===0){el.innerHTML='<div class="empty-day">札所範囲を設定してください</div>';return;}
+
+  el.innerHTML=dates.map((date,i)=>{
+    const dayTemples=Object.entries(state.assignments)
+      .filter(([no,a])=>a.date===date)
+      .map(([no,a])=>({...getTemple(parseInt(no)),anchored:a.anchored}))
+      .filter(t=>t&&t.no)
+      .sort((a,b)=>a.no-b.no);
+
+    if(dayTemples.length===0){
+      return '<div class="day-column rest-day" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,\''+date+'\')">'+
+        '<div class="day-header empty"><div class="day-num">Day '+(i+1)+'</div><div class="day-date">'+fmtDate(date)+'</div><div class="day-info">休養日</div></div>'+
+        '<div class="day-body"><div class="empty-day">ドラッグで<br>札所を追加</div></div></div>';
+    }
+
+    const stats=calcDayStats(dayTemples);
+    const mainDojo=dayTemples[0].dojo;
+    const dojoClass=DOJO_CLASSES[mainDojo]||'empty';
+
+    return '<div class="day-column" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,\''+date+'\')">'+
+      '<div class="day-header '+dojoClass+'">'+
+        '<div class="day-num">Day '+(i+1)+'</div>'+
+        '<div class="day-date">'+fmtDate(date)+'</div>'+
+        '<div class="day-info">'+stats.count+'寺 / '+stats.totalDist.toFixed(1)+'km<br>〜'+stats.endTime+'</div>'+
+      '</div><div class="day-body">'+
+        dayTemples.map(t=>{
+          const color=PREF_COLORS[t.pref]||'var(--border)';
+          return '<div class="temple-card '+(t.anchored?'anchored':'auto')+'" draggable="true" ondragstart="onDragStart(event,'+t.no+')" ondragend="onDragEnd(event)" style="border-left-color:'+color+'">'+
+            '<button class="lock-btn" onclick="event.stopPropagation();toggleAnchor('+t.no+')" title="'+(t.anchored?'固定解除':'固定')+'">'+(t.anchored?'&#128274;':'&#128275;')+'</button>'+
+            '<div class="t-no">'+t.no+'番 '+t.dojo+'</div>'+
+            '<div class="t-name">'+t.name+'</div>'+
+            '<div class="t-dist">&rarr;'+t.dist+'km ('+t.time+')</div>'+
+            '<div class="t-pref">'+t.pref+' '+t.honzon+'</div></div>';
+        }).join('')+
+      '</div></div>';
+  }).join('');
+}
+
+function exportJSON(){
+  const data=JSON.stringify({tripName:state.tripName,startDate:state.startDate,endDate:state.endDate,startTemple:state.startTemple,endTemple:state.endTemple,mode:state.mode,startTime:state.startTime,assignments:state.assignments,exportedAt:new Date().toISOString()},null,2);
+  const blob=new Blob([data],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='itinerary_'+(state.tripName||'trip').replace(/\s/g,'_')+'_'+(state.startDate||'')+'.json';a.click();URL.revokeObjectURL(url);
+}
+
+function exportCSV(){
+  const dates=getDateArray(state.startDate,state.endDate);
+  let csv='\uFEFF日付,Day,札所番号,寺名,道場,県,御本尊,次番迄距離km,移動時間,ステータス\n';
+  dates.forEach((date,i)=>{
+    const dayTemples=Object.entries(state.assignments)
+      .filter(([no,a])=>a.date===date)
+      .map(([no,a])=>({...getTemple(parseInt(no)),anchored:a.anchored}))
+      .filter(t=>t&&t.no)
+      .sort((a,b)=>a.no-b.no);
+    if(dayTemples.length===0){
+      csv+=date+',Day '+(i+1)+',,,,,,,,\n';
+    }else{
+      dayTemples.forEach(t=>{
+        csv+=[date,'Day '+(i+1),t.no,t.name,t.dojo,t.pref,t.honzon,t.dist,t.time,t.anchored?'固定':'自動'].join(',')+'\n';
+      });
+    }
+  });
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='itinerary_'+(state.startDate||'')+'.csv';a.click();URL.revokeObjectURL(url);
+}
+
+document.addEventListener('change',function(e){
+  if(e.target.id&&e.target.id.startsWith('s')&&e.target.id!=='sTripName'){
+    updateSettings();
+  }
+});
+
+loadState();
+if(Object.keys(state.assignments).length===0){autoDistribute();}
+render();
+
+</script>
+</body>
+</html>
