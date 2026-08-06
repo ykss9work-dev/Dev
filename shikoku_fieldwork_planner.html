@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>四国遍路フィールドワーク研究管理</title>
+<style>
+:root {
+  --primary: #2d5016;
+  --primary-light: #4a7c2a;
+  --secondary: #6b8e4e;
+  --accent: #c4956a;
+  --accent-light: #d4a574;
+  --bg: #faf9f6;
+  --surface: #ffffff;
+  --text: #2d2d2d;
+  --text-muted: #6b6b6b;
+  --border: #e0ddd5;
+  --border-light: #f0ede5;
+  --danger: #c0392b;
+  --warning: #e67e22;
+  --success: #27ae60;
+  --info: #2980b9;
+  --radius: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-lg: 0 4px 12px rgba(0,0,0,0.1);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; }
+.app { display: flex; min-height: 100vh; }
+.sidebar { width: 240px; background: var(--primary); color: #fff; padding: 0; flex-shrink: 0; display: flex; flex-direction: column; position: fixed; height: 100vh; overflow-y: auto; }
+.sidebar-header { padding: 24px 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.15); }
+.sidebar-header h1 { font-size: 16px; font-weight: 600; line-height: 1.5; }
+.sidebar-header p { font-size: 11px; opacity: 0.7; margin-top: 4px; }
+.sidebar nav { padding: 8px 0; flex: 1; }
+.sidebar nav ul { list-style: none; }
+.sidebar nav li { padding: 12px 20px; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.sidebar nav li:hover { background: rgba(255,255,255,0.1); }
+.sidebar nav li.active { background: rgba(255,255,255,0.15); border-left: 3px solid var(--accent); padding-left: 17px; }
+.sidebar nav li .icon { font-size: 16px; width: 20px; text-align: center; }
+.sidebar-footer { padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.15); font-size: 10px; opacity: 0.6; }
+.content { flex: 1; margin-left: 240px; padding: 24px 32px; max-width: calc(100vw - 240px); }
+.content-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.content-header h2 { font-size: 22px; font-weight: 600; color: var(--primary); }
+.content-header .actions { display: flex; gap: 8px; }
+.btn { padding: 8px 16px; border: none; border-radius: var(--radius); cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-light); }
+.btn-accent { background: var(--accent); color: #fff; }
+.btn-accent:hover { background: var(--accent-light); }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+.btn-outline:hover { background: var(--border-light); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+.card h3 { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.card .value { font-size: 28px; font-weight: 700; color: var(--primary); }
+.card .sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; box-shadow: var(--shadow); }
+.section h3 { font-size: 16px; font-weight: 600; color: var(--primary); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--border-light); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; padding: 10px 12px; background: var(--border-light); font-weight: 600; color: var(--text); border-bottom: 2px solid var(--border); white-space: nowrap; }
+td { padding: 10px 12px; border-bottom: 1px solid var(--border-light); vertical-align: top; }
+tr:hover { background: var(--border-light); }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+.badge-pending { background: #f0f0f0; color: #666; }
+.badge-planned { background: #fff3cd; color: #856404; }
+.badge-visited { background: #d4edda; color: #155724; }
+.badge-done { background: #d1ecf1; color: #0c5460; }
+.badge-dojo-hosshin { background: #fce4ec; color: #c62828; }
+.badge-dojo-shugyo { background: #e3f2fd; color: #1565c0; }
+.badge-dojo-bodai { background: #e8f5e9; color: #2e7d32; }
+.badge-dojo-nehan { background: #fff8e1; color: #f57f17; }
+.filter-bar { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+.filter-bar select, .filter-bar input { padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; background: var(--surface); }
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); display: none; z-index: 1000; justify-content: center; align-items: flex-start; padding-top: 40px; }
+.modal-overlay.show { display: flex; }
+.modal { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-lg); width: 90%; max-width: 600px; max-height: 85vh; overflow-y: auto; }
+.modal-header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.modal-header h3 { font-size: 18px; font-weight: 600; color: var(--primary); }
+.modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted); }
+.modal-body { padding: 24px; }
+.modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 4px; color: var(--text); }
+.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; font-family: inherit; }
+.form-group textarea { min-height: 80px; resize: vertical; }
+.form-row { display: flex; gap: 12px; }
+.form-row .form-group { flex: 1; }
+.empty-state { text-align: center; padding: 48px 20px; color: var(--text-muted); }
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.3; }
+.research-box { background: var(--border-light); border-left: 4px solid var(--accent); padding: 16px 20px; border-radius: 4px; margin-bottom: 16px; }
+.research-box p { margin-bottom: 8px; }
+.research-box strong { color: var(--primary); }
+.progress-bar { width: 100%; height: 8px; background: var(--border-light); border-radius: 4px; overflow: hidden; margin-top: 4px; }
+.progress-bar-fill { height: 100%; background: var(--primary); border-radius: 4px; transition: width 0.3s; }
+.dojo-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+.dojo-card { padding: 16px; border-radius: var(--radius); text-align: center; cursor: pointer; transition: transform 0.2s; }
+.dojo-card:hover { transform: translateY(-2px); }
+.dojo-card.hosshin { background: #fce4ec; border: 2px solid #f8bbd0; }
+.dojo-card.shugyo { background: #e3f2fd; border: 2px solid #90caf9; }
+.dojo-card.bodai { background: #e8f5e9; border: 2px solid #a5d6a7; }
+.dojo-card.nehan { background: #fff8e1; border: 2px solid #ffecb3; }
+.dojo-card h4 { font-size: 14px; margin-bottom: 4px; }
+.dojo-card p { font-size: 12px; color: var(--text-muted); }
+.dojo-card .count { font-size: 24px; font-weight: 700; margin: 8px 0 4px; }
+.note-item { border-left: 3px solid var(--accent); padding: 12px 16px; margin-bottom: 12px; background: var(--border-light); border-radius: 4px; }
+.note-item .meta { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+.note-item .category { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 10px; font-weight: 600; margin-right: 6px; }
+.cat-observation { background: #e3f2fd; color: #1565c0; }
+.cat-thought { background: #fff3cd; color: #856404; }
+.cat-question { background: #fce4ec; color: #c62828; }
+.cat-idea { background: #e8f5e9; color: #2e7d32; }
+.interview-guide { background: var(--border-light); border-radius: var(--radius); padding: 16px; margin-top: 12px; }
+.interview-guide ol { margin-left: 20px; }
+.interview-guide li { margin-bottom: 6px; }
+.tag { display: inline-block; background: var(--border-light); padding: 2px 8px; border-radius: 8px; font-size: 11px; margin: 2px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h1>四国遍路<br>フィールドワーク研究</h1>
+      <p>Fieldwork Research Manager</p>
+    </div>
+    <nav>
+      <ul>
+        <li data-view="dashboard" class="active"><span class="icon">24f0</span>ダッシュボード</li>
+        <li data-view="temples"><span class="icon">6dc</span>札所一覧</li>
+        <li data-view="itinerary"><span class="icon">4c5</span>旅程計画</li>
+        <li data-view="interviews"><span class="icon">1df</span>インタビュー管理</li>
+        <li data-view="notes"><span class="icon">1f4</span>フィールドノート</li>
+        <li data-view="research"><span class="icon">1f3</span>研究設計</li>
+        <li data-view="data"><span class="icon">1d7</span>データ管理</li>
+      </ul>
+    </nav>
+    <div class="sidebar-footer">
+      <p>localStorage自動保存<br>Berger / Schutz / Latour</p>
+    </div>
+  </aside>
+  <main class="content" id="content"></main>
+</div>
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle"></h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer" id="modalFooter"></div>
+  </div>
+</div>
+<script>
+const TEMPLES = __TEMPLES__;
+// JS omitted for brevity
+</script>
+</body>
+</html>
